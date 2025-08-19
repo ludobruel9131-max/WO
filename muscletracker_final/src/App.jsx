@@ -19,11 +19,20 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// --- Données programmes (rotation 7 jours) ---
-const workoutPlan = [
+// --- Gestion stockage local ---
+const saveData = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+const loadData = (key, defaultValue) => {
+  const data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : defaultValue;
+};
+
+// --- Programmes (rotation 7 jours) ---
+const workouts = [
   {
-    day: "Jour 1 - Push",
-    duration: "45 min",
+    day: "Push (Pectoraux / Triceps / Épaules)",
+    duration: 45,
     exercises: [
       { name: "Développé couché haltères", sets: 4, reps: "8-10" },
       { name: "Développé militaire barre", sets: 4, reps: "8-10" },
@@ -32,8 +41,8 @@ const workoutPlan = [
     ],
   },
   {
-    day: "Jour 2 - Pull",
-    duration: "40 min",
+    day: "Pull (Dos / Biceps)",
+    duration: 40,
     exercises: [
       { name: "Tractions lestées", sets: 4, reps: "8-10" },
       { name: "Rowing barre", sets: 4, reps: "8-10" },
@@ -42,8 +51,8 @@ const workoutPlan = [
     ],
   },
   {
-    day: "Jour 3 - Jambes + Core",
-    duration: "50 min",
+    day: "Jambes + Core",
+    duration: 50,
     exercises: [
       { name: "Squat barre", sets: 5, reps: "6-8" },
       { name: "Fentes haltères", sets: 3, reps: "10/ jambe" },
@@ -52,8 +61,8 @@ const workoutPlan = [
     ],
   },
   {
-    day: "Jour 4 - HIIT/Cardio",
-    duration: "35 min",
+    day: "HIIT/Cardio",
+    duration: 35,
     exercises: [
       { name: "Sprints 30s", sets: 10, reps: "repos 60s" },
       { name: "Burpees", sets: 3, reps: "15" },
@@ -61,8 +70,8 @@ const workoutPlan = [
     ],
   },
   {
-    day: "Jour 5 - Full Body Force",
-    duration: "60 min",
+    day: "Full Body Force",
+    duration: 60,
     exercises: [
       { name: "Soulevé de terre", sets: 5, reps: "5" },
       { name: "Développé couché barre", sets: 5, reps: "5" },
@@ -71,8 +80,8 @@ const workoutPlan = [
     ],
   },
   {
-    day: "Jour 6 - Jambes lourdes",
-    duration: "50 min",
+    day: "Jambes lourdes",
+    duration: 50,
     exercises: [
       { name: "Presse à cuisses", sets: 4, reps: "8-10" },
       { name: "Soulevé de terre sumo", sets: 4, reps: "6-8" },
@@ -81,8 +90,8 @@ const workoutPlan = [
     ],
   },
   {
-    day: "Jour 7 - Repos actif",
-    duration: "30 min",
+    day: "Repos actif",
+    duration: 30,
     exercises: [
       { name: "Marche rapide", sets: 1, reps: "30 min" },
       { name: "Étirements yoga", sets: 1, reps: "15 min" },
@@ -91,12 +100,12 @@ const workoutPlan = [
   },
 ];
 
-// --- Nutrition saisonnière ---
-const meals = {
+// --- Nutrition ---
+const baseMeals = {
   ete: [
     { meal: "Poulet grillé + quinoa + courgettes grillées", kcal: 650 },
     { meal: "Saumon + salade tomates/avocat + riz basmati", kcal: 700 },
-    { meal: "Omelette 3 œufs + légumes d’été + pain complet", kcal: 550 },
+    { meal: "Omelette + légumes d’été + pain complet", kcal: 550 },
   ],
   hiver: [
     { meal: "Ragoût de lentilles + patate douce + carottes", kcal: 600 },
@@ -105,30 +114,63 @@ const meals = {
   ],
 };
 
-// --- Progression poids/charges ---
-const initialProgress = {
-  weight: [
-    { week: "S1", poids: 78 },
-    { week: "S2", poids: 77.5 },
-    { week: "S3", poids: 77 },
-  ],
-  strength: [
-    { week: "S1", bench: 80, squat: 100, deadlift: 120 },
-    { week: "S2", bench: 82, squat: 105, deadlift: 125 },
-    { week: "S3", bench: 85, squat: 110, deadlift: 130 },
-  ],
-};
-
 export default function App() {
   const [tab, setTab] = useState("plan");
   const [dayIndex, setDayIndex] = useState(0);
-  const [progress, setProgress] = useState(initialProgress);
+  const [profile, setProfile] = useState(
+    loadData("profile", { poids: "", taille: "", objectif: "maintenance" })
+  );
+  const [progress, setProgress] = useState(
+    loadData("progress", { weight: [], strength: [] })
+  );
 
-  // --- Rotation automatique du programme chaque jour ---
+  const [newWeight, setNewWeight] = useState("");
+  const [newStrength, setNewStrength] = useState("");
+
+  // Choisir le jour automatiquement
   useEffect(() => {
     const today = new Date();
-    setDayIndex(today.getDay()); // 0=Dimanche → Jour 7
+    setDayIndex(today.getDay()); // 0=Dimanche
   }, []);
+
+  // Sauvegarde auto
+  useEffect(() => {
+    saveData("profile", profile);
+    saveData("progress", progress);
+  }, [profile, progress]);
+
+  // Calcul macros
+  const calcMacros = () => {
+    if (!profile.poids || !profile.taille) return null;
+    let bmr = 10 * profile.poids + 6.25 * profile.taille - 5 * 25 + 5; // Mifflin homme approx
+    if (profile.objectif === "perte") bmr -= 300;
+    if (profile.objectif === "prise") bmr += 300;
+    return {
+      kcal: bmr,
+      proteines: Math.round(profile.poids * 2),
+      glucides: Math.round((bmr * 0.5) / 4),
+      lipides: Math.round((bmr * 0.25) / 9),
+    };
+  };
+
+  const macros = calcMacros();
+
+  // Ajouter progression
+  const addProgress = () => {
+    const week = progress.weight.length + 1;
+    const updated = { ...progress };
+
+    if (newWeight) {
+      updated.weight.push({ week, poids: Number(newWeight) });
+    }
+    if (newStrength) {
+      updated.strength.push({ week, charge: Number(newStrength) });
+    }
+
+    setProgress(updated);
+    setNewWeight("");
+    setNewStrength("");
+  };
 
   return (
     <div className="min-h-screen flex bg-[#121212] text-white font-sans">
@@ -177,16 +219,16 @@ export default function App() {
         </button>
       </div>
 
-      {/* Contenu principal */}
+      {/* Contenu */}
       <div className="flex-1 p-6">
         {tab === "plan" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 className="text-2xl font-bold text-orange-400 mb-4">
-              {workoutPlan[dayIndex].day} ({workoutPlan[dayIndex].duration})
+              {workouts[dayIndex].day} ({workouts[dayIndex].duration} min)
             </h2>
-            <ul className="space-y-2">
-              {workoutPlan[dayIndex].exercises.map((ex, i) => (
-                <li
+            <div className="space-y-2">
+              {workouts[dayIndex].exercises.map((ex, i) => (
+                <div
                   key={i}
                   className="bg-[#1e1e1e] p-3 rounded-lg border border-[#333]"
                 >
@@ -194,19 +236,27 @@ export default function App() {
                     {ex.name}
                   </span>{" "}
                   — {ex.sets} x {ex.reps}
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </motion.div>
         )}
 
         {tab === "nutrition" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 className="text-2xl font-bold text-orange-400 mb-4">
-              Menus saisonniers
+              Nutrition
             </h2>
+            {macros && (
+              <div className="bg-[#1e1e1e] p-4 rounded-lg mb-4">
+                <p>Calories : {macros.kcal} kcal</p>
+                <p>Protéines : {macros.proteines} g</p>
+                <p>Glucides : {macros.glucides} g</p>
+                <p>Lipides : {macros.lipides} g</p>
+              </div>
+            )}
             <div className="grid md:grid-cols-2 gap-4">
-              {meals.ete.map((m, i) => (
+              {baseMeals.ete.map((m, i) => (
                 <div
                   key={i}
                   className="bg-[#1e1e1e] p-4 rounded-lg border border-[#333]"
@@ -224,6 +274,32 @@ export default function App() {
             <h2 className="text-2xl font-bold text-orange-400 mb-4">
               Progression
             </h2>
+
+            {/* Formulaire */}
+            <div className="bg-[#1e1e1e] p-4 rounded-lg mb-4 space-y-2">
+              <input
+                type="number"
+                placeholder="Poids (kg)"
+                value={newWeight}
+                onChange={(e) => setNewWeight(e.target.value)}
+                className="w-full p-2 rounded bg-[#2a2a2a]"
+              />
+              <input
+                type="number"
+                placeholder="Charge max (kg)"
+                value={newStrength}
+                onChange={(e) => setNewStrength(e.target.value)}
+                className="w-full p-2 rounded bg-[#2a2a2a]"
+              />
+              <button
+                onClick={addProgress}
+                className="bg-orange-500 text-black px-4 py-2 rounded w-full"
+              >
+                Ajouter
+              </button>
+            </div>
+
+            {/* Graphique poids */}
             <div className="h-64 mb-6 bg-[#1e1e1e] p-2 rounded-lg">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={progress.weight}>
@@ -241,6 +317,8 @@ export default function App() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+
+            {/* Graphique force */}
             <div className="h-64 bg-[#1e1e1e] p-2 rounded-lg">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={progress.strength}>
@@ -249,9 +327,12 @@ export default function App() {
                   <YAxis stroke="#aaa" />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="bench" stroke="#f97316" />
-                  <Line type="monotone" dataKey="squat" stroke="#facc15" />
-                  <Line type="monotone" dataKey="deadlift" stroke="#22c55e" />
+                  <Line
+                    type="monotone"
+                    dataKey="charge"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -261,10 +342,37 @@ export default function App() {
         {tab === "profil" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 className="text-2xl font-bold text-orange-400 mb-4">Profil</h2>
-            <p>
-              Ici tu pourras entrer ton poids, taille, objectif et calculer tes
-              macros 🔥 (à compléter).
-            </p>
+            <div className="bg-[#1e1e1e] p-4 rounded-lg space-y-2">
+              <input
+                type="number"
+                placeholder="Poids (kg)"
+                value={profile.poids}
+                onChange={(e) =>
+                  setProfile({ ...profile, poids: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[#2a2a2a]"
+              />
+              <input
+                type="number"
+                placeholder="Taille (cm)"
+                value={profile.taille}
+                onChange={(e) =>
+                  setProfile({ ...profile, taille: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[#2a2a2a]"
+              />
+              <select
+                value={profile.objectif}
+                onChange={(e) =>
+                  setProfile({ ...profile, objectif: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[#2a2a2a]"
+              >
+                <option value="perte">Perte de poids</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="prise">Prise de masse</option>
+              </select>
+            </div>
           </motion.div>
         )}
       </div>
