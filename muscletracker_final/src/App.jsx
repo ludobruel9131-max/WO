@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Dumbbell,
-  Flame,
-  BarChart3,
-  User,
-  Calendar,
-  Leaf,
-} from "lucide-react";
+import { Dumbbell, User, BarChart2, Calendar } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,363 +8,300 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
-// --- Gestion stockage local ---
-const saveData = (key, value) => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
-const loadData = (key, defaultValue) => {
-  const data = localStorage.getItem(key);
-  return data ? JSON.parse(data) : defaultValue;
+// --- Données des séances (7 jours) ---
+const workouts = {
+  Lundi: {
+    type: "Push (Pecs/Épaules/Triceps)",
+    duration: "45 min",
+    exercises: [
+      "Développé couché barre — 4 x 8",
+      "Développé militaire haltères — 4 x 10",
+      "Pompes lestées — 3 x 12",
+      "Dips — 3 x 12",
+    ],
+  },
+  Mardi: {
+    type: "Pull (Dos/Biceps)",
+    duration: "40 min",
+    exercises: [
+      "Tractions pronation — 4 x max",
+      "Rowing barre — 4 x 10",
+      "Curl barre — 3 x 12",
+      "Face pull — 3 x 15",
+    ],
+  },
+  Mercredi: {
+    type: "Jambes + Abdos",
+    duration: "50 min",
+    exercises: [
+      "Squat barre — 5 x 6-8",
+      "Fentes haltères — 3 x 10/ jambe",
+      "Soulevé de terre JT — 4 x 10",
+      "Gainage planche — 3 x 60 sec",
+    ],
+  },
+  Jeudi: {
+    type: "HIIT / Cardio",
+    duration: "35 min",
+    exercises: [
+      "Sprint 30s / Marche 90s — x10",
+      "Burpees — 5 x 15",
+      "Mountain climbers — 4 x 40 sec",
+    ],
+  },
+  Vendredi: {
+    type: "Full body charges lourdes",
+    duration: "55 min",
+    exercises: [
+      "Soulevé de terre — 5 x 5",
+      "Développé couché — 5 x 5",
+      "Squat — 5 x 5",
+    ],
+  },
+  Samedi: {
+    type: "Jambes lourdes + Core",
+    duration: "50 min",
+    exercises: [
+      "Squat avant — 5 x 8",
+      "Hip thrust barre — 4 x 12",
+      "Soulevé de terre sumo — 4 x 8",
+      "Abdos roulettes — 3 x 15",
+    ],
+  },
+  Dimanche: {
+    type: "Repos actif",
+    duration: "30 min",
+    exercises: ["Yoga", "Marche rapide 30 min", "Étirements 15 min"],
+  },
 };
 
-// --- Programmes (rotation 7 jours) ---
-const workouts = [
-  {
-    day: "Push (Pectoraux / Triceps / Épaules)",
-    duration: 45,
-    exercises: [
-      { name: "Développé couché haltères", sets: 4, reps: "8-10" },
-      { name: "Développé militaire barre", sets: 4, reps: "8-10" },
-      { name: "Dips lestés", sets: 3, reps: "10-12" },
-      { name: "Écarté machine", sets: 3, reps: "12-15" },
-    ],
-  },
-  {
-    day: "Pull (Dos / Biceps)",
-    duration: 40,
-    exercises: [
-      { name: "Tractions lestées", sets: 4, reps: "8-10" },
-      { name: "Rowing barre", sets: 4, reps: "8-10" },
-      { name: "Curl incliné", sets: 3, reps: "12" },
-      { name: "Face pull", sets: 3, reps: "12-15" },
-    ],
-  },
-  {
-    day: "Jambes + Core",
-    duration: 50,
-    exercises: [
-      { name: "Squat barre", sets: 5, reps: "6-8" },
-      { name: "Fentes haltères", sets: 3, reps: "10/ jambe" },
-      { name: "Soulevé de terre jambes tendues", sets: 4, reps: "8-10" },
-      { name: "Gainage planche", sets: 3, reps: "60 sec" },
-    ],
-  },
-  {
-    day: "HIIT/Cardio",
-    duration: 35,
-    exercises: [
-      { name: "Sprints 30s", sets: 10, reps: "repos 60s" },
-      { name: "Burpees", sets: 3, reps: "15" },
-      { name: "Mountain climbers", sets: 3, reps: "30s" },
-    ],
-  },
-  {
-    day: "Full Body Force",
-    duration: 60,
-    exercises: [
-      { name: "Soulevé de terre", sets: 5, reps: "5" },
-      { name: "Développé couché barre", sets: 5, reps: "5" },
-      { name: "Squat avant", sets: 4, reps: "6" },
-      { name: "Tractions", sets: 4, reps: "8-10" },
-    ],
-  },
-  {
-    day: "Jambes lourdes",
-    duration: 50,
-    exercises: [
-      { name: "Presse à cuisses", sets: 4, reps: "8-10" },
-      { name: "Soulevé de terre sumo", sets: 4, reps: "6-8" },
-      { name: "Hip thrust", sets: 4, reps: "8-10" },
-      { name: "Crunch lesté", sets: 3, reps: "20" },
-    ],
-  },
-  {
-    day: "Repos actif",
-    duration: 30,
-    exercises: [
-      { name: "Marche rapide", sets: 1, reps: "30 min" },
-      { name: "Étirements yoga", sets: 1, reps: "15 min" },
-      { name: "Gainage léger", sets: 2, reps: "30 sec" },
-    ],
-  },
-];
-
-// --- Nutrition ---
-const baseMeals = {
+// --- Nutrition (printemps/été vs automne/hiver) ---
+const meals = {
   ete: [
-    { meal: "Poulet grillé + quinoa + courgettes grillées", kcal: 650 },
-    { meal: "Saumon + salade tomates/avocat + riz basmati", kcal: 700 },
-    { meal: "Omelette + légumes d’été + pain complet", kcal: 550 },
+    "Poulet grillé + quinoa + légumes grillés",
+    "Saumon + salade d’été + avocat",
+    "Omelette + tomates + fromage frais",
   ],
   hiver: [
-    { meal: "Ragoût de lentilles + patate douce + carottes", kcal: 600 },
-    { meal: "Poulet rôti + purée de brocoli + pommes de terre", kcal: 700 },
-    { meal: "Chili con carne + riz complet", kcal: 750 },
+    "Ragoût de lentilles + patate douce",
+    "Bœuf mijoté + riz complet + légumes rôtis",
+    "Soupe de pois chiches + pain complet",
   ],
 };
 
+// --- Données de progression par défaut ---
+const weightData = [
+  { week: "S1", weight: 78 },
+  { week: "S2", weight: 77.5 },
+  { week: "S3", weight: 77 },
+  { week: "S4", weight: 76.5 },
+];
+
+const strengthData = [
+  { week: "S1", squat: 80, bench: 70, deadlift: 100 },
+  { week: "S2", squat: 85, bench: 72, deadlift: 105 },
+  { week: "S3", squat: 87, bench: 74, deadlift: 110 },
+  { week: "S4", squat: 90, bench: 76, deadlift: 115 },
+];
+
 export default function App() {
-  const [tab, setTab] = useState("plan");
-  const [dayIndex, setDayIndex] = useState(0);
-  const [profile, setProfile] = useState(
-    loadData("profile", { poids: "", taille: "", objectif: "maintenance" })
-  );
-  const [progress, setProgress] = useState(
-    loadData("progress", { weight: [], strength: [] })
-  );
+  const [page, setPage] = useState("plan");
+  const [selectedDay, setSelectedDay] = useState("Lundi");
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem("profile");
+    return saved
+      ? JSON.parse(saved)
+      : { poids: "", taille: "", age: "", objectif: "" };
+  });
 
-  const [newWeight, setNewWeight] = useState("");
-  const [newStrength, setNewStrength] = useState("");
-
-  // Choisir le jour automatiquement
   useEffect(() => {
-    const today = new Date();
-    setDayIndex(today.getDay()); // 0=Dimanche
-  }, []);
+    localStorage.setItem("profile", JSON.stringify(profile));
+  }, [profile]);
 
-  // Sauvegarde auto
-  useEffect(() => {
-    saveData("profile", profile);
-    saveData("progress", progress);
-  }, [profile, progress]);
-
-  // Calcul macros
-  const calcMacros = () => {
-    if (!profile.poids || !profile.taille) return null;
-    let bmr = 10 * profile.poids + 6.25 * profile.taille - 5 * 25 + 5; // Mifflin homme approx
-    if (profile.objectif === "perte") bmr -= 300;
-    if (profile.objectif === "prise") bmr += 300;
-    return {
-      kcal: bmr,
-      proteines: Math.round(profile.poids * 2),
-      glucides: Math.round((bmr * 0.5) / 4),
-      lipides: Math.round((bmr * 0.25) / 9),
-    };
-  };
-
-  const macros = calcMacros();
-
-  // Ajouter progression
-  const addProgress = () => {
-    const week = progress.weight.length + 1;
-    const updated = { ...progress };
-
-    if (newWeight) {
-      updated.weight.push({ week, poids: Number(newWeight) });
-    }
-    if (newStrength) {
-      updated.strength.push({ week, charge: Number(newStrength) });
-    }
-
-    setProgress(updated);
-    setNewWeight("");
-    setNewStrength("");
-  };
+  // --- Calcul macros simples ---
+  const calories =
+    profile.poids && profile.taille && profile.age
+      ? Math.round(profile.poids * 33)
+      : null;
 
   return (
-    <div className="min-h-screen flex bg-[#121212] text-white font-sans">
+    <div className="flex h-screen bg-black text-white font-sans">
       {/* Sidebar */}
-      <div className="w-60 bg-[#1a1a1a] border-r border-[#333] p-4 flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-orange-400 flex items-center gap-2">
-          <Dumbbell /> MuscleTracker
-        </h1>
-        <button
-          onClick={() => setTab("plan")}
-          className={`flex items-center gap-2 p-2 rounded-lg ${
-            tab === "plan" ? "bg-orange-500 text-black" : "hover:bg-[#2a2a2a]"
-          }`}
-        >
-          <Calendar size={18} /> Plan du jour
-        </button>
-        <button
-          onClick={() => setTab("nutrition")}
-          className={`flex items-center gap-2 p-2 rounded-lg ${
-            tab === "nutrition"
-              ? "bg-orange-500 text-black"
-              : "hover:bg-[#2a2a2a]"
-          }`}
-        >
-          <Leaf size={18} /> Nutrition
-        </button>
-        <button
-          onClick={() => setTab("progress")}
-          className={`flex items-center gap-2 p-2 rounded-lg ${
-            tab === "progress"
-              ? "bg-orange-500 text-black"
-              : "hover:bg-[#2a2a2a]"
-          }`}
-        >
-          <BarChart3 size={18} /> Progression
-        </button>
-        <button
-          onClick={() => setTab("profil")}
-          className={`flex items-center gap-2 p-2 rounded-lg ${
-            tab === "profil"
-              ? "bg-orange-500 text-black"
-              : "hover:bg-[#2a2a2a]"
-          }`}
-        >
-          <User size={18} /> Profil
-        </button>
+      <div className="w-64 bg-zinc-900 p-6 flex flex-col justify-between">
+        <div>
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/616/616408.png"
+            alt="lion"
+            className="w-16 h-16 mx-auto mb-4"
+          />
+          <h1 className="text-2xl font-bold text-center text-orange-400">
+            Muscle Tracker 🦁
+          </h1>
+          <nav className="mt-8 space-y-4">
+            <button onClick={() => setPage("plan")} className="flex items-center space-x-2 hover:text-orange-400">
+              <Calendar /> <span>Plan</span>
+            </button>
+            <button onClick={() => setPage("nutrition")} className="flex items-center space-x-2 hover:text-orange-400">
+              <Dumbbell /> <span>Nutrition</span>
+            </button>
+            <button onClick={() => setPage("progression")} className="flex items-center space-x-2 hover:text-orange-400">
+              <BarChart2 /> <span>Progression</span>
+            </button>
+            <button onClick={() => setPage("profil")} className="flex items-center space-x-2 hover:text-orange-400">
+              <User /> <span>Profil</span>
+            </button>
+          </nav>
+        </div>
+        <p className="text-xs text-zinc-500 text-center">Dark mode savane/lion</p>
       </div>
 
-      {/* Contenu */}
-      <div className="flex-1 p-6">
-        {tab === "plan" && (
+      {/* Content */}
+      <div className="flex-1 p-8 overflow-y-auto">
+        {/* PLAN */}
+        {page === "plan" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 className="text-2xl font-bold text-orange-400 mb-4">
-              {workouts[dayIndex].day} ({workouts[dayIndex].duration} min)
-            </h2>
-            <div className="space-y-2">
-              {workouts[dayIndex].exercises.map((ex, i) => (
+            <h2 className="text-3xl font-bold text-orange-400 mb-6">Plan de la semaine</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {Object.keys(workouts).map((day) => (
                 <div
-                  key={i}
-                  className="bg-[#1e1e1e] p-3 rounded-lg border border-[#333]"
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`p-4 rounded-xl cursor-pointer ${
+                    selectedDay === day
+                      ? "bg-orange-600"
+                      : "bg-zinc-800 hover:bg-zinc-700"
+                  }`}
                 >
-                  <span className="font-semibold text-orange-300">
-                    {ex.name}
-                  </span>{" "}
-                  — {ex.sets} x {ex.reps}
+                  <h3 className="font-bold">{day}</h3>
+                  <p className="text-sm">{workouts[day].type}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-zinc-900 p-6 rounded-xl shadow-lg">
+              <h3 className="text-xl font-bold mb-2">{selectedDay}</h3>
+              <p className="italic text-zinc-400 mb-4">
+                {workouts[selectedDay].type} • {workouts[selectedDay].duration}
+              </p>
+              <ul className="space-y-2">
+                {workouts[selectedDay].exercises.map((exo, i) => (
+                  <li key={i} className="bg-zinc-800 p-2 rounded-lg">
+                    {exo}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+
+        {/* NUTRITION */}
+        {page === "nutrition" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <h2 className="text-3xl font-bold text-orange-400 mb-6">Nutrition</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {meals.ete.map((meal, i) => (
+                <div key={i} className="bg-zinc-900 p-4 rounded-xl shadow-lg">
+                  🌞 Été : {meal}
+                </div>
+              ))}
+              {meals.hiver.map((meal, i) => (
+                <div key={i} className="bg-zinc-900 p-4 rounded-xl shadow-lg">
+                  ❄️ Hiver : {meal}
                 </div>
               ))}
             </div>
           </motion.div>
         )}
 
-        {tab === "nutrition" && (
+        {/* PROGRESSION */}
+        {page === "progression" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 className="text-2xl font-bold text-orange-400 mb-4">
-              Nutrition
-            </h2>
-            {macros && (
-              <div className="bg-[#1e1e1e] p-4 rounded-lg mb-4">
-                <p>Calories : {macros.kcal} kcal</p>
-                <p>Protéines : {macros.proteines} g</p>
-                <p>Glucides : {macros.glucides} g</p>
-                <p>Lipides : {macros.lipides} g</p>
+            <h2 className="text-3xl font-bold text-orange-400 mb-6">Progression</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-zinc-900 p-4 rounded-xl">
+                <h3 className="font-bold mb-2">Poids (kg)</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={weightData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="week" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="weight" stroke="#f97316" />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-            )}
-            <div className="grid md:grid-cols-2 gap-4">
-              {baseMeals.ete.map((m, i) => (
-                <div
-                  key={i}
-                  className="bg-[#1e1e1e] p-4 rounded-lg border border-[#333]"
-                >
-                  <p>{m.meal}</p>
-                  <p className="text-sm text-orange-300">{m.kcal} kcal</p>
+              <div className="bg-zinc-900 p-4 rounded-xl">
+                <h3 className="font-bold mb-2">Forces principales</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={strengthData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="week" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="squat" stroke="#f97316" />
+                    <Line type="monotone" dataKey="bench" stroke="#facc15" />
+                    <Line type="monotone" dataKey="deadlift" stroke="#22c55e" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* PROFIL */}
+        {page === "profil" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <h2 className="text-3xl font-bold text-orange-400 mb-6">Profil</h2>
+            <div className="bg-zinc-900 p-6 rounded-xl shadow-lg">
+              <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="number"
+                  placeholder="Poids (kg)"
+                  className="p-2 rounded bg-zinc-800"
+                  value={profile.poids}
+                  onChange={(e) =>
+                    setProfile({ ...profile, poids: e.target.value })
+                  }
+                />
+                <input
+                  type="number"
+                  placeholder="Taille (cm)"
+                  className="p-2 rounded bg-zinc-800"
+                  value={profile.taille}
+                  onChange={(e) =>
+                    setProfile({ ...profile, taille: e.target.value })
+                  }
+                />
+                <input
+                  type="number"
+                  placeholder="Âge"
+                  className="p-2 rounded bg-zinc-800"
+                  value={profile.age}
+                  onChange={(e) =>
+                    setProfile({ ...profile, age: e.target.value })
+                  }
+                />
+                <input
+                  type="text"
+                  placeholder="Objectif (perte, maintien, prise)"
+                  className="p-2 rounded bg-zinc-800"
+                  value={profile.objectif}
+                  onChange={(e) =>
+                    setProfile({ ...profile, objectif: e.target.value })
+                  }
+                />
+              </form>
+              {calories && (
+                <div className="mt-6 p-4 bg-orange-600 rounded-xl">
+                  <h3 className="font-bold">Besoins estimés :</h3>
+                  <p>{calories} kcal/jour</p>
+                  <p>Protéines : {Math.round(calories * 0.3 / 4)} g</p>
+                  <p>Glucides : {Math.round(calories * 0.5 / 4)} g</p>
+                  <p>Lipides : {Math.round(calories * 0.2 / 9)} g</p>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {tab === "progress" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 className="text-2xl font-bold text-orange-400 mb-4">
-              Progression
-            </h2>
-
-            {/* Formulaire */}
-            <div className="bg-[#1e1e1e] p-4 rounded-lg mb-4 space-y-2">
-              <input
-                type="number"
-                placeholder="Poids (kg)"
-                value={newWeight}
-                onChange={(e) => setNewWeight(e.target.value)}
-                className="w-full p-2 rounded bg-[#2a2a2a]"
-              />
-              <input
-                type="number"
-                placeholder="Charge max (kg)"
-                value={newStrength}
-                onChange={(e) => setNewStrength(e.target.value)}
-                className="w-full p-2 rounded bg-[#2a2a2a]"
-              />
-              <button
-                onClick={addProgress}
-                className="bg-orange-500 text-black px-4 py-2 rounded w-full"
-              >
-                Ajouter
-              </button>
-            </div>
-
-            {/* Graphique poids */}
-            <div className="h-64 mb-6 bg-[#1e1e1e] p-2 rounded-lg">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={progress.weight}>
-                  <CartesianGrid stroke="#333" />
-                  <XAxis dataKey="week" stroke="#aaa" />
-                  <YAxis stroke="#aaa" />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="poids"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Graphique force */}
-            <div className="h-64 bg-[#1e1e1e] p-2 rounded-lg">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={progress.strength}>
-                  <CartesianGrid stroke="#333" />
-                  <XAxis dataKey="week" stroke="#aaa" />
-                  <YAxis stroke="#aaa" />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="charge"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-        )}
-
-        {tab === "profil" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 className="text-2xl font-bold text-orange-400 mb-4">Profil</h2>
-            <div className="bg-[#1e1e1e] p-4 rounded-lg space-y-2">
-              <input
-                type="number"
-                placeholder="Poids (kg)"
-                value={profile.poids}
-                onChange={(e) =>
-                  setProfile({ ...profile, poids: e.target.value })
-                }
-                className="w-full p-2 rounded bg-[#2a2a2a]"
-              />
-              <input
-                type="number"
-                placeholder="Taille (cm)"
-                value={profile.taille}
-                onChange={(e) =>
-                  setProfile({ ...profile, taille: e.target.value })
-                }
-                className="w-full p-2 rounded bg-[#2a2a2a]"
-              />
-              <select
-                value={profile.objectif}
-                onChange={(e) =>
-                  setProfile({ ...profile, objectif: e.target.value })
-                }
-                className="w-full p-2 rounded bg-[#2a2a2a]"
-              >
-                <option value="perte">Perte de poids</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="prise">Prise de masse</option>
-              </select>
+              )}
             </div>
           </motion.div>
         )}
@@ -379,3 +309,4 @@ export default function App() {
     </div>
   );
 }
+
