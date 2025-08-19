@@ -7,7 +7,6 @@ import {
   User,
   Calendar,
   Salad,
-  Weight,
   Clock,
 } from "lucide-react";
 import {
@@ -135,13 +134,19 @@ const defaultStrength = [
   { w: "S4", squat: 90, bench: 76, dead: 115 },
 ];
 
-export default function App() {
-  const [tab, setTab] = useState("plan");
-  const today = new Date();
-  const dayName = useMemo(() => jours[today.getDay()], [today]);
-  const [selectedDay, setSelectedDay] = useState(
-    dayName === "Dimanche" ? "Lundi" : dayName
-  );
+const [tab, setTab] = useState("plan");
+
+// 'today' est créé une seule fois au montage, donc il reste stable
+const today = useMemo(() => new Date(), []);
+
+// Nom du jour basé sur 'today' (stable car 'today' ne change pas)
+const dayName = useMemo(() => jours[today.getDay()], [today]);
+
+// Initialisation du jour sélectionné sans dépendre d'un hook
+const [selectedDay, setSelectedDay] = useState(() => {
+  const d = jours[today.getDay()];
+  return d === "Dimanche" ? "Lundi" : d;
+});
 
   const [profile, setProfile] = useState(() =>
     load("mt_profile", { poids: "", taille: "", age: "", sexe: "homme", objectif: "maintenance" })
