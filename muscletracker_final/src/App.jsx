@@ -211,7 +211,7 @@ const [selectedDay, setSelectedDay] = useState(() => {
   }, [today]);
 
   const daysOrder = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
-
+{
   return (
     <div className="min-h-screen flex bg-savane-bg text-white">
       {/* Sidebar */}
