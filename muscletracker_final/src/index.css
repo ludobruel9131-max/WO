@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fond général + texture légère */
+body {
+  @apply bg-savane-bg text-white;
+}
+
+/* Bandeau lion */
+.hero-bg {
+  background-image:
+    linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)),
+    url('https://images.unsplash.com/photo-1546182990-dffeafbe841d?q=80&w=1600&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Cartes */
+.card {
+  @apply bg-savane-card border border-savane-line rounded-xl2 shadow-soft;
+}
+
+/* Boutons accent */
+.btn-accent {
+  @apply bg-savane-accent hover:bg-savane-accent2 text-black font-semibold px-4 py-2 rounded-lg transition;
+}
+
+/* Tags/Badges */
+.badge {
+  @apply inline-block px-2 py-1 rounded-md text-xs bg-savane-line text-savane-textDim;
+}
