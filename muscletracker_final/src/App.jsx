@@ -13,7 +13,6 @@ const App = () => {
   const [newExercise, setNewExercise] = useState({ name: "", weight: "", reps: "" });
   const [selectedDay, setSelectedDay] = useState("Lundi");
 
-  const today = new Date();
   const daysOrder = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
   // --- Progression calculée ---
